@@ -67,12 +67,26 @@ namespace transport {
 		return *it->second;
 	}
 
-	void TransportCatalogue::GetRouteInfo()
+	RouteInfo TransportCatalogue::GetRouteInfo(const Bus& route) const
 	{
+		unordered_set<string_view> unique_stops;
+		double route_length = 0;
+
+		if (route.stops.size()) {
+
+			for (int i = 1; i < route.stops.size(); ++i) {
+				unique_stops.insert(route.stops[i]->name);
+				route_length += distance::ComputeDistance(route.stops[i - 1]->coords, route.stops[i]->coords);
+			}
+
+		}
+
+		return { route.name, route.stops.size(), unique_stops.size(), route_length };
 	}
 
-	void TransportCatalogue::GetStopInfo()
+	StopInfo TransportCatalogue::GetStopInfo(const Stop& stop) const
 	{
+		return { stop.name, stop.buses };
 	}
 
 }

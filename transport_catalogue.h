@@ -33,13 +33,27 @@ namespace transport {
 			return *lhs < *rhs;
 		}
 	};
+
+	using BusSet = std::set<const Bus*, BusComparator>;
 	
 	struct Stop {
 		std::string name;
 		distance::Coordinates coords;
-		std::set<const Bus*, BusComparator> buses;
+		BusSet buses;
 		bool isFound = true;
-	};	
+	};
+
+	struct RouteInfo {
+		std::string_view name;
+		size_t stops_amount;
+		size_t unique_stops_amount;
+		double length;
+	};
+
+	struct StopInfo {
+		std::string_view name;
+		const BusSet& buses;
+	};
 
 	class TransportCatalogue {
 	public:
@@ -47,8 +61,8 @@ namespace transport {
 		void AddStop(std::string name, double latitude, double longitude);
 		const Bus& GetRoute(std::string_view busname) const;
 		Stop& GetStop(std::string_view stopname) const;
-		void GetRouteInfo();
-		void GetStopInfo();
+		RouteInfo GetRouteInfo(const Bus& route) const;
+		StopInfo GetStopInfo(const Stop& stop) const;
 
 	private:
 		std::unordered_map<std::string_view, Stop*> stopname_to_stop_;

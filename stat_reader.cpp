@@ -47,30 +47,45 @@ namespace transport::output {
 		return transport_cat_.GetStop(stopname);
 	}
 
+	ostream& operator<<(ostream& os, const RouteInfo& route_info)
+	{
+		os << "Bus "s << route_info.name << ": "s
+			<< route_info.stops_amount << " stops on route, "s
+			<< route_info.unique_stops_amount << " unique stops, "s
+			<< std::setprecision(6) << route_info.length << " route length"s;
+
+		return os;
+	}
+
 	void StatReader::OutputRoute(const Bus& route)
 	{
 		if (!route.isFound) {
 			std::cout << "Bus "s << route.name << ": not found"s << std::endl;
 			return;
 		}
-
 		
-		std::unordered_set<string_view> unique_stops;
-		double route_length = 0;
+		std::cout << transport_cat_.GetRouteInfo(route) << std::endl;
+		
+	}
 
-		if (route.stops.size()) {
-
-			for (int i = 1; i < route.stops.size(); ++i) {
-				unique_stops.insert(route.stops[i]->name);
-				route_length += distance::ComputeDistance(route.stops[i - 1]->coords, route.stops[i]->coords);
-			}
-
+	ostream& operator<<(ostream& os, const StopInfo& stop_info)
+	{
+		if (!stop_info.buses.size()) {
+			os << "Stop "s << stop_info.name << ": no buses"s;
+			return os;
 		}
 
-		std::cout << "Bus "s << route.name << ": "s
-			<< route.stops.size() << " stops on route, "s
-			<< unique_stops.size() << " unique stops, "s
-			<< std::setprecision(6) << route_length << " route length"s << std::endl;
+		os << "Stop "s << stop_info.name << ": buses "s;
+		for (auto it = stop_info.buses.cbegin(); it != stop_info.buses.cend(); ++it) {
+			os << (*it)->name;
+			auto next_it = it;
+			;
+			if (next(next_it) != stop_info.buses.cend()) {
+				os << " "s;
+			}
+		}
+
+		return os;
 	}
 
 	void StatReader::OutputStop(const Stop& stop)
@@ -79,22 +94,8 @@ namespace transport::output {
 			std::cout << "Stop "s << stop.name << ": not found"s << std::endl;
 			return;
 		}
-
-		if (!stop.buses.size()) {
-			std::cout << "Stop "s << stop.name << ": no buses"s << std::endl;
-			return;
-		}
-
-		std::cout << "Stop "s << stop.name << ": buses "s;
-		for (auto it = stop.buses.cbegin(); it != stop.buses.cend(); ++it) {			
-			std::cout << (*it)->name;
-			auto next_it = it;
-			;
-			if (next(next_it) != stop.buses.cend()) {
-				std::cout << " "s;
-			}
-		}
-		std::cout << std::endl;
+		
+		std::cout << transport_cat_.GetStopInfo(stop) << std::endl;
 	}
 
 }
