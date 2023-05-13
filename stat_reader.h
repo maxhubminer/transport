@@ -18,7 +18,9 @@ namespace transport {
 			const TransportCatalogue& transport_cat_;
 		private:
 			const Bus& ParseBusCommand(std::string_view line);
+			const Stop& ParseStopCommand(std::string_view line);
 			void OutputRoute(const Bus&);
+			void OutputStop(const Stop&);
 		};
 
 	}
