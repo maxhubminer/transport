@@ -8,6 +8,7 @@
 namespace transport::input {
 
 	using namespace std;
+	using namespace transport::utils;
 	
 	void InputReader::ParseInput(std::istream& input, TransportCatalogue& transport_cat) {
 
@@ -30,6 +31,9 @@ namespace transport::input {
 			else if (command.first == "Bus") {
 				auto bus_info = ParseBusCommand(command.second);
 				bus_queries.AddQuery(std::move(bus_info));				
+			}
+			else {
+				return; // no supported commands or a number of DB queries
 			}
 		}
 
@@ -83,14 +87,20 @@ namespace transport::input {
 		return { string(busname), stopnames, isRing }; // bus queries are processed later
 	}
 
-	string_view InputReader::Lstrip(string_view line) {
+}
+
+namespace transport::utils {
+
+	using namespace std;
+	
+	string_view Lstrip(string_view line) {
 		while (!line.empty() && isspace(line[0])) {
 			line.remove_prefix(1);
 		}
 		return line;
 	}
 
-	string_view InputReader::LRstrip(string_view line) {
+	string_view LRstrip(string_view line) {
 		line = Lstrip(line);
 		while (!line.empty() && isspace(line[line.size() - 1])) {
 			line.remove_suffix(1);
@@ -98,7 +108,7 @@ namespace transport::input {
 		return line;
 	}
 
-	pair<string_view, string_view> InputReader::Split(string_view line, char by) {
+	pair<string_view, string_view> Split(string_view line, char by) {
 		size_t pos = line.find(by);
 		string_view left = line.substr(0, pos);
 
@@ -110,7 +120,7 @@ namespace transport::input {
 		}
 	}
 
-	string_view InputReader::Unbracket(string_view value, char symbol) {
+	string_view Unbracket(string_view value, char symbol) {
 		if (!value.empty() && value.front() == symbol) {
 			value.remove_prefix(1);
 		}
@@ -119,5 +129,4 @@ namespace transport::input {
 		}
 		return value;
 	}
-
 }

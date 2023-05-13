@@ -6,6 +6,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <deque>
+#include <vector>
 
 namespace transport {
 
@@ -17,6 +18,9 @@ namespace transport {
 	struct Bus { // aka Route
 		std::string name;
 		std::vector<const Stop*> stops;
+		bool Empty() const {
+			return !stops.size();
+		}
 	};	
 
 	class TransportCatalogue {

@@ -1,5 +1,6 @@
 
 #include "input_reader.h"
+#include "stat_reader.h"
 
 #include <iostream>
 #include <sstream>
@@ -10,8 +11,12 @@ int main() {
 
 	TransportCatalogue transport_cat;
 	input::InputReader reader;
+    output::StatReader output_reader(transport_cat);
 
-    std::istringstream input{
+    reader.ParseInput(std::cin, transport_cat);
+    output_reader.ParseInput(std::cin);
+
+    /*std::istringstream input{
         "10\n"
         "Stop Tolstopaltsevo : 55.611087, 37.208290\n"
         "Stop Marushkino : 55.595884, 37.209755\n"
@@ -28,6 +33,7 @@ int main() {
         "Bus 750\n"
         "Bus 751\n" };
 
-	reader.ParseInput(input, transport_cat);
+	reader.ParseInput(input, transport_cat);    
+    output_reader.ParseInput(input);*/
 
 }

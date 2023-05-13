@@ -40,8 +40,9 @@ namespace transport {
 		auto it = busname_to_bus_.find(busname);
 
 		if (it == busname_to_bus_.end()) {
-			static Bus nobus;
-			return nobus;
+			static Bus bus;
+			bus.name = string(busname);
+			return bus;
 		}
 
 		return *it->second;
