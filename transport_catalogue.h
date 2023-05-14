@@ -83,4 +83,9 @@ namespace transport {
 		std::deque<Bus> routes_;
 	};
 
+	namespace tests {
+		void TestCommonCases();
+		void TestCornerCases();
+	}
+
 }
