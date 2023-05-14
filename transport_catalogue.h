@@ -48,6 +48,7 @@ namespace transport {
 		size_t stops_amount;
 		size_t unique_stops_amount;
 		double length;
+		double curvature;
 	};
 
 	struct StopInfo {
@@ -63,10 +64,20 @@ namespace transport {
 		Stop& GetStop(std::string_view stopname) const;
 		RouteInfo GetRouteInfo(const Bus& route) const;
 		StopInfo GetStopInfo(const Stop& stop) const;
+		void SetDistance(std::string_view stopname1, std::string_view stopname2, unsigned int distance);
+		unsigned int GetDistance(std::string_view stopname1, std::string_view stopname2) const;
 
+	private:
+		struct PtrPairHasher {
+			size_t operator()(std::pair<const Stop*, const Stop*> pair_) const noexcept {
+				return std::hash<const void*>{}(pair_.first) + 3 * std::hash<const void*>{}(pair_.second);
+			}
+		};
+	
 	private:
 		std::unordered_map<std::string_view, Stop*> stopname_to_stop_;
 		std::unordered_map<std::string_view, const Bus*> busname_to_bus_;
+		std::unordered_map<std::pair<const Stop*, const Stop*>, unsigned int, PtrPairHasher> stops_distance_;
 
 		std::deque<Stop> stops_; // queue does not have iterators; and list is over-functional for the task
 		std::deque<Bus> routes_;

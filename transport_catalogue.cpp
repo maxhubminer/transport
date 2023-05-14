@@ -71,22 +71,43 @@ namespace transport {
 	{
 		unordered_set<string_view> unique_stops;
 		double route_length = 0;
+		double geo_route_length = 0;
 
 		if (route.stops.size()) {
 
 			for (int i = 1; i < route.stops.size(); ++i) {
 				unique_stops.insert(route.stops[i]->name);
-				route_length += distance::ComputeDistance(route.stops[i - 1]->coords, route.stops[i]->coords);
+				geo_route_length += distance::ComputeDistance(route.stops[i - 1]->coords, route.stops[i]->coords);
+				route_length += GetDistance(route.stops[i - 1]->name, route.stops[i]->name);
 			}
 
 		}
 
-		return { route.name, route.stops.size(), unique_stops.size(), route_length };
+		double curvature = route_length / geo_route_length;
+
+		return { route.name, route.stops.size(), unique_stops.size(), route_length, curvature };
 	}
 
 	StopInfo TransportCatalogue::GetStopInfo(const Stop& stop) const
 	{
 		return { stop.name, stop.buses };
+	}
+
+	void TransportCatalogue::SetDistance(std::string_view stopname1, std::string_view stopname2, unsigned int distance) {
+		stops_distance_[{ &GetStop(stopname1), &GetStop(stopname2) }] = distance;
+	}
+
+	unsigned int TransportCatalogue::GetDistance(std::string_view stopname1, std::string_view stopname2) const {
+		auto key = std::make_pair<const Stop*, const Stop*>(&GetStop(stopname1), &GetStop(stopname2));
+		if (!stops_distance_.count(key)) {
+			key = std::make_pair<const Stop*, const Stop*>(&GetStop(stopname2), &GetStop(stopname1));
+		}
+
+		if (!stops_distance_.count(key)) {
+			return 0;
+		}
+
+		return stops_distance_.at(key);
 	}
 
 }

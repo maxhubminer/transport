@@ -52,7 +52,9 @@ namespace transport::output {
 		os << "Bus "s << route_info.name << ": "s
 			<< route_info.stops_amount << " stops on route, "s
 			<< route_info.unique_stops_amount << " unique stops, "s
-			<< std::setprecision(6) << route_info.length << " route length"s;
+			<< std::setprecision(6) << route_info.length << " route length, "s
+			<< std::setprecision(6) << route_info.curvature << " curvature"s
+			;
 
 		return os;
 	}

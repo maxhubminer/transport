@@ -9,8 +9,16 @@
 namespace transport {
 	namespace input {
 
-		typedef std::tuple<std::string_view, double, double> StopInfo;
+		struct DistanceToStop;
+		
+		typedef std::tuple<std::string_view, double, double, std::vector<DistanceToStop> > StopInfo;
 		typedef std::tuple<std::string, std::vector<std::string>, bool> BusInfo;
+		
+
+		struct DistanceToStop {
+			std::string dest_stopname;
+			unsigned int distance;
+		};
 
 		class BusQueryQueue {
 		public:
@@ -36,6 +44,7 @@ namespace transport {
 		private:
 			StopInfo ParseStopCommand(std::string_view line);
 			BusInfo ParseBusCommand(std::string_view line);
+			void AddStopDistances(std::string_view line, std::vector<DistanceToStop>& distances);
 		};
 
 	}
