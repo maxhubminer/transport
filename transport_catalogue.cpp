@@ -13,17 +13,17 @@ namespace transport {
 	void TransportCatalogue::AddRoute(std::string name, const std::vector<std::string>& stopnames, bool isRing)
 	{
 		size_t stop_amount = stopnames.size() * (isRing ? 1 : 2) - (isRing ? 0 : 1);
-		vector<Stop*> stop_ptrs(stop_amount);
+		vector<const Stop*> stop_ptrs(stop_amount);
 
 		transform(stopnames.cbegin(), stopnames.cend(), stop_ptrs.begin(), [this](const auto& stopname) {
-			return &GetStop(stopname);
+			return GetStop(stopname);
 			});
 
 		if (!isRing) {
 			auto it = stop_ptrs.begin();
 			advance(it, stopnames.size());
 			transform(++stopnames.crbegin(), stopnames.crend(), it, [this](const auto& stopname) {
-				return &GetStop(stopname);
+				return GetStop(stopname);
 				});
 		}
 
@@ -31,45 +31,43 @@ namespace transport {
 		busname_to_bus_[routes_.front().name] = &routes_.front();
 
 		for (auto stop_ptr : routes_.front().stops) {
-			stop_ptr->buses.insert(&routes_.front());
+			stopname_to_buses_[stop_ptr->name].insert(&routes_.front());
 		}
 	}
 
-	void TransportCatalogue::AddStop(std::string name, double latitude, double longitude)
+	void TransportCatalogue::AddStop(std::string name, distance::Coordinates coords)
 	{
-		distance::Coordinates coords{ latitude, longitude };
-		stops_.push_front({ name, coords, {} });
+		stops_.push_front({ name, coords });
 		stopname_to_stop_[stops_.front().name] = &stops_.front();
 	}
 
-	const Bus& TransportCatalogue::GetRoute(std::string_view busname) const
+	const Bus* TransportCatalogue::GetRoute(std::string_view busname) const
 	{
 		auto it = busname_to_bus_.find(busname);
 
 		if (it == busname_to_bus_.end()) {
-			static Bus nobus;
-			nobus.name = string(busname);
-			nobus.isFound = false;
-			return nobus;
+			return nullptr;
 		}
 
-		return *it->second;
+		return it->second;
 	}
 
-	Stop& TransportCatalogue::GetStop(std::string_view stopname) const
+	const Stop* TransportCatalogue::GetStop(std::string_view stopname) const
 	{
 		auto it = stopname_to_stop_.find(stopname);
 
 		if (it == stopname_to_stop_.end()) {
-			static Stop nostop;
-			nostop.name = string(stopname);
-			nostop.isFound = false;
-			return nostop;
+			return nullptr;
 		}
 
-		return *it->second;
+		return it->second;
 	}
 
+	RouteInfo TransportCatalogue::GetRouteInfo(string_view routename) const
+	{
+		return GetRouteInfo(*GetRoute(routename));
+	}
+	
 	RouteInfo TransportCatalogue::GetRouteInfo(const Bus& route) const
 	{
 		unordered_set<string_view> unique_stops;
@@ -91,19 +89,26 @@ namespace transport {
 		return { route.name, route.stops.size(), unique_stops.size(), route_length, curvature };
 	}
 
+	StopInfo TransportCatalogue::GetStopInfo(string_view stopname) const
+	{
+		return GetStopInfo(*GetStop(stopname));
+	}
+
 	StopInfo TransportCatalogue::GetStopInfo(const Stop& stop) const
 	{
-		return { stop.name, stop.buses };
+		return { stop.name, 
+			stopname_to_buses_.count(stop.name) ? 
+			std::optional<BusSet>{ stopname_to_buses_.at(stop.name) } : std::nullopt };
 	}
 
-	void TransportCatalogue::SetDistance(std::string_view stopname1, std::string_view stopname2, unsigned int distance) {
-		stops_distance_[{ &GetStop(stopname1), &GetStop(stopname2) }] = distance;
+	void TransportCatalogue::SetDistance(std::string_view stopname_from, std::string_view stopname_to, unsigned int distance) {
+		stops_distance_[{ GetStop(stopname_from), GetStop(stopname_to) }] = distance;
 	}
 
-	unsigned int TransportCatalogue::GetDistance(std::string_view stopname1, std::string_view stopname2) const {
-		auto key = std::make_pair<const Stop*, const Stop*>(&GetStop(stopname1), &GetStop(stopname2));
+	unsigned int TransportCatalogue::GetDistance(std::string_view stopname_from, std::string_view stopname_to) const {
+		auto key = std::make_pair<const Stop*, const Stop*>(GetStop(stopname_from), GetStop(stopname_to));
 		if (!stops_distance_.count(key)) {
-			key = std::make_pair<const Stop*, const Stop*>(&GetStop(stopname2), &GetStop(stopname1));
+			key = std::make_pair<const Stop*, const Stop*>(GetStop(stopname_to), GetStop(stopname_from));
 		}
 
 		if (!stops_distance_.count(key)) {
@@ -114,67 +119,67 @@ namespace transport {
 	}
 
 	namespace tests {
-		void tests::TestCommonCases()
+		void TestCommonCases()
 		{
-			TransportCatalogue transport_cat;
+			TransportCatalogue catalogue;
 
-			auto stop = transport_cat.GetStop("unknown");
-			assert(stop.isFound == false);
+			auto stop = catalogue.GetStop("unknown");
+			assert(!stop);
 			
-			auto route = transport_cat.GetRoute("unknown");
-			assert(route.isFound == false);
+			auto route = catalogue.GetRoute("unknown");
+			assert(!route);
 			
-			transport_cat.AddStop("stop A", 53.199489, -105.759253);
-			transport_cat.AddStop("stop B", 54.840504, 46.591607);
-			transport_cat.AddStop("stop C", -23.354995, 119.732057);
-			transport_cat.AddStop("stop D", 48.071613, 114.524894);
-			transport_cat.AddStop("stop E", 64.136986, -21.872559);
-			transport_cat.AddStop("stop F", -36.851350, 174.762452);
+			catalogue.AddStop("stop A", { 53.199489, -105.759253 });
+			catalogue.AddStop("stop B", { 54.840504, 46.591607 });
+			catalogue.AddStop("stop C", { -23.354995, 119.732057 });
+			catalogue.AddStop("stop D", { 48.071613, 114.524894 });
+			catalogue.AddStop("stop E", { 64.136986, -21.872559 });
+			catalogue.AddStop("stop F", { -36.851350, 174.762452 });
 
-			transport_cat.AddRoute("bus 001", { "stop C", "stop A", "stop A", "stop F", "stop D", "stop C"}, true);
-			auto route001 = transport_cat.GetRouteInfo(transport_cat.GetRoute("bus 001"));
+			catalogue.AddRoute("bus 001", { "stop C", "stop A", "stop A", "stop F", "stop D", "stop C"}, true);
+			auto route001 = catalogue.GetRouteInfo("bus 001");
 			assert(route001.stops_amount == 6);
 			assert(route001.unique_stops_amount == 4);
 			
-			transport_cat.SetDistance("stop A", "stop B", 100);
-			transport_cat.AddRoute("bus 999", { "stop A", "stop B", "stop E" }, false);
-			auto route999 = transport_cat.GetRouteInfo(transport_cat.GetRoute("bus 999"));
+			catalogue.SetDistance("stop A", "stop B", 100);
+			catalogue.AddRoute("bus 999", { "stop A", "stop B", "stop E" }, false);
+			auto route999 = catalogue.GetRouteInfo("bus 999");
 			assert(route999.stops_amount == 5);
 			assert(route999.length == 200);
-			assert(route999.curvature == 8.6733320167853890e-06);
+			assert(route999.curvature == 8.6733320170381233e-06);
 
 		}
 
-		void tests::TestCornerCases()
+		void TestCornerCases()
 		{
-			TransportCatalogue transport_cat;
+			TransportCatalogue catalogue;
 
-			transport_cat.AddStop("A", 53.199489, -105.759253);
-			transport_cat.AddStop("B", 54.840504, 46.591607);
-			transport_cat.AddStop("C", -23.354995, 119.732057);
-			transport_cat.AddStop("  ", .0, .0);
+			catalogue.AddStop("A", { 53.199489, -105.759253 });
+			catalogue.AddStop("B", { 54.840504, 46.591607 });
+			catalogue.AddStop("C", { -23.354995, 119.732057 });
+			catalogue.AddStop("  ", { .0, .0 });
 
-			transport_cat.SetDistance("  ", "A", 1000);
-			assert(transport_cat.GetDistance("A", "  ") == 1000);
+			catalogue.SetDistance("  ", "A", 1000);
+			assert(catalogue.GetDistance("A", "  ") == 1000);
 
-			transport_cat.SetDistance("A", "A", 300);
-			transport_cat.AddRoute("cyclic", {"A", "A", "A"}, false);
-			auto cyclic_info = transport_cat.GetRouteInfo(transport_cat.GetRoute("cyclic"));
+			catalogue.SetDistance("A", "A", 300);
+			catalogue.AddRoute("cyclic", {"A", "A", "A"}, false);
+			auto cyclic_info = catalogue.GetRouteInfo("cyclic");
 			assert(cyclic_info.length == 1200);
 			assert(cyclic_info.unique_stops_amount == 1);
 
-			transport_cat.AddRoute("empty", {  }, true);
-			assert(transport_cat.GetRouteInfo(transport_cat.GetRoute("empty")).stops_amount == 0);
-			transport_cat.AddRoute("empty ring", {  }, true);
-			assert(transport_cat.GetRouteInfo(transport_cat.GetRoute("empty ring")).stops_amount == 0);
-			transport_cat.AddRoute(" ", { "  ", "B", "C" }, true);
-			assert(transport_cat.GetRouteInfo(transport_cat.GetRoute(" ")).name == " ");
+			catalogue.AddRoute("empty", {  }, true);
+			assert(catalogue.GetRouteInfo("empty").stops_amount == 0);
+			catalogue.AddRoute("empty ring", {  }, true);
+			assert(catalogue.GetRouteInfo("empty ring").stops_amount == 0);
+			catalogue.AddRoute(" ", { "  ", "B", "C" }, true);
+			assert(catalogue.GetRouteInfo(" ").name == " ");
 
 			// overflow check
 			unsigned int max_value = std::numeric_limits<unsigned int>::max();
-			transport_cat.SetDistance("B", "C", max_value);			
-			transport_cat.AddRoute("B2C_and_back", { "B", "C" }, false);
-			auto overflow_info = transport_cat.GetRouteInfo(transport_cat.GetRoute("B2C_and_back"));
+			catalogue.SetDistance("B", "C", max_value);			
+			catalogue.AddRoute("B2C_and_back", { "B", "C" }, false);
+			auto overflow_info = catalogue.GetRouteInfo("B2C_and_back");
 			assert(overflow_info.length == max_value*2.0);
 			
 		}

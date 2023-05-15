@@ -13,7 +13,7 @@ namespace transport::output {
 	using namespace std;
 	using namespace transport::utils;
 	
-	void StatReader::ParseInput(std::istream& input)
+	void StatReader::ParseInput(std::istream& input, std::ostream& output)
 	{
 		string query_amount_str;
 		getline(input, query_amount_str);
@@ -27,24 +27,24 @@ namespace transport::output {
 
 			if (command.first == "Bus") {
 				const auto& bus_info = ParseBusCommand(command.second);
-				OutputRoute(bus_info);
+				OutputRoute(bus_info, output);
 			} else if (command.first == "Stop") {
 				const auto& stop_info = ParseStopCommand(command.second);
-				OutputStop(stop_info);
+				OutputStop(stop_info, output);
 			}
 		}
 	}
 
-	const Bus& StatReader::ParseBusCommand(string_view line) {
+	const std::pair<std::string_view, const Bus*> StatReader::ParseBusCommand(string_view line) {
 
 		auto routename = LRstrip(line);
-		return transport_cat_.GetRoute(routename);
+		return { routename, catalogue_.GetRoute(routename) };
 	}
 
-	const Stop& StatReader::ParseStopCommand(string_view line) {
+	const std::pair<std::string_view, const Stop*> StatReader::ParseStopCommand(string_view line) {
 
 		auto stopname = LRstrip(line);
-		return transport_cat_.GetStop(stopname);
+		return { stopname, catalogue_.GetStop(stopname) };
 	}
 
 	ostream& operator<<(ostream& os, const RouteInfo& route_info)
@@ -59,30 +59,30 @@ namespace transport::output {
 		return os;
 	}
 
-	void StatReader::OutputRoute(const Bus& route)
+	void StatReader::OutputRoute(const std::pair<std::string_view, const Bus*> route_info, std::ostream& output)
 	{
-		if (!route.isFound) {
-			std::cout << "Bus "s << route.name << ": not found"s << std::endl;
+		if (!route_info.second) {
+			output << "Bus "s << route_info.first << ": not found"s << std::endl;
 			return;
 		}
 		
-		std::cout << transport_cat_.GetRouteInfo(route) << std::endl;
+		output << catalogue_.GetRouteInfo(route_info.first) << std::endl;
 		
 	}
 
 	ostream& operator<<(ostream& os, const StopInfo& stop_info)
 	{
-		if (!stop_info.buses.size()) {
+		if (!stop_info.buses.has_value()) {
 			os << "Stop "s << stop_info.name << ": no buses"s;
 			return os;
 		}
 
 		os << "Stop "s << stop_info.name << ": buses "s;
-		for (auto it = stop_info.buses.cbegin(); it != stop_info.buses.cend(); ++it) {
+		for (auto it = stop_info.buses.value().cbegin(); it != stop_info.buses.value().cend(); ++it) {
 			os << (*it)->name;
 			auto next_it = it;
 			;
-			if (next(next_it) != stop_info.buses.cend()) {
+			if (next(next_it) != stop_info.buses.value().cend()) {
 				os << " "s;
 			}
 		}
@@ -90,14 +90,14 @@ namespace transport::output {
 		return os;
 	}
 
-	void StatReader::OutputStop(const Stop& stop)
+	void StatReader::OutputStop(const std::pair<std::string_view, const Stop*> stop_info, std::ostream& output)
 	{
-		if (!stop.isFound) {
-			std::cout << "Stop "s << stop.name << ": not found"s << std::endl;
+		if (!stop_info.second) {
+			output << "Stop "s << stop_info.first << ": not found"s << std::endl;
 			return;
 		}
 		
-		std::cout << transport_cat_.GetStopInfo(stop) << std::endl;
+		output << catalogue_.GetStopInfo(stop_info.first) << std::endl;
 	}
 
 }

@@ -11,16 +11,16 @@ namespace transport {
 
 		class StatReader {
 		public:
-			explicit StatReader(const TransportCatalogue& transport_cat)
-				: transport_cat_(transport_cat) {};
-			void ParseInput(std::istream& input);
+			explicit StatReader(const TransportCatalogue& catalogue)
+				: catalogue_(catalogue) {};
+			void ParseInput(std::istream& input, std::ostream& output);
 		private:
-			const TransportCatalogue& transport_cat_;
+			const TransportCatalogue& catalogue_;
 		private:
-			const Bus& ParseBusCommand(std::string_view line);
-			const Stop& ParseStopCommand(std::string_view line);
-			void OutputRoute(const Bus&);
-			void OutputStop(const Stop&);
+			const std::pair<std::string_view, const Bus*> ParseBusCommand(std::string_view line);
+			const std::pair<std::string_view, const Stop*> ParseStopCommand(std::string_view line);
+			void OutputRoute(const std::pair<std::string_view, const Bus*> route_info, std::ostream& output);
+			void OutputStop(const std::pair<std::string_view, const Stop*>, std::ostream& output);
 		};
 
 	}

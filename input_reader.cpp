@@ -10,7 +10,7 @@ namespace transport::input {
 	using namespace std;
 	using namespace transport::utils;
 	
-	void InputReader::ParseInput(std::istream& input, TransportCatalogue& transport_cat) {
+	void InputReader::ParseInput(std::istream& input, TransportCatalogue& catalogue) {
 
 		string query_amount_str;
 		getline(input, query_amount_str);
@@ -28,8 +28,8 @@ namespace transport::input {
 			if (command.first == "Stop") {
 				auto stop_info = ParseStopCommand(command.second);
 				string_view stopname = get<0>(stop_info);
-				transport_cat.AddStop( string(stopname), get<1>(stop_info), get<2>(stop_info) );
-				stop_distances[transport_cat.GetStop(stopname).name] = std::move(get<3>(stop_info));
+				catalogue.AddStop(string(stopname), { get<1>(stop_info), get<2>(stop_info) });
+				stop_distances[catalogue.GetStop(stopname)->name] = std::move(get<3>(stop_info));
 			}
 			else if (command.first == "Bus") {
 				auto bus_info = ParseBusCommand(command.second);
@@ -41,12 +41,12 @@ namespace transport::input {
 		}
 
 		for (auto& query : bus_queries.GetQueue()) {
-			transport_cat.AddRoute(std::move(get<0>(query)), std::move(get<1>(query)), get<2>(query));
+			catalogue.AddRoute(std::move(get<0>(query)), std::move(get<1>(query)), get<2>(query));
 		}
 
 		for (auto& [stopname, dest_info_vector] : stop_distances) {
 			for (auto& dest_info : dest_info_vector) {
-				transport_cat.SetDistance(stopname, dest_info.dest_stopname, dest_info.distance);
+				catalogue.SetDistance(stopname, dest_info.dest_stopname, dest_info.distance);
 			}			
 		}
 

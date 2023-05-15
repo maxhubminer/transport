@@ -40,7 +40,7 @@ namespace transport {
 		
 		class InputReader {
 		public:
-			void ParseInput(std::istream& input, TransportCatalogue& transport_cat);
+			void ParseInput(std::istream& input, TransportCatalogue& catalogue);
 		private:
 			StopInfo ParseStopCommand(std::string_view line);
 			BusInfo ParseBusCommand(std::string_view line);
