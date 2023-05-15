@@ -78,11 +78,11 @@ namespace transport::output {
 		}
 
 		os << "Stop "s << stop_info.name << ": buses "s;
-		for (auto it = stop_info.buses.value().cbegin(); it != stop_info.buses.value().cend(); ++it) {
+		for (auto it = stop_info.buses.value().get().cbegin(); it != stop_info.buses.value().get().cend(); ++it) {
 			os << (*it)->name;
 			auto next_it = it;
 			;
-			if (next(next_it) != stop_info.buses.value().cend()) {
+			if (next(next_it) != stop_info.buses.value().get().cend()) {
 				os << " "s;
 			}
 		}

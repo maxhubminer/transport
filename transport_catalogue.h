@@ -51,7 +51,7 @@ namespace transport {
 
 	struct StopInfo {
 		std::string_view name;
-		const std::optional<BusSet> buses;
+		const std::optional<std::reference_wrapper<const BusSet>> buses;
 	};
 
 	class TransportCatalogue {

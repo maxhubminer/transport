@@ -98,7 +98,7 @@ namespace transport {
 	{
 		return { stop.name, 
 			stopname_to_buses_.count(stop.name) ? 
-			std::optional<BusSet>{ stopname_to_buses_.at(stop.name) } : std::nullopt };
+			std::optional<std::reference_wrapper<const BusSet>>{ stopname_to_buses_.at(stop.name) } : std::nullopt };
 	}
 
 	void TransportCatalogue::SetDistance(std::string_view stopname_from, std::string_view stopname_to, unsigned int distance) {
