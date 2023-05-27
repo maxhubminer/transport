@@ -1,5 +1,6 @@
 #pragma once
 
+#include "domain.h"
 #include "geo.h"
 
 #include <string>
@@ -11,35 +12,9 @@
 #include <deque>
 #include <vector>
 #include <optional>
+#include <functional>
 
 namespace transport {
-
-	struct Stop;
-	
-	struct Bus { // aka Route		
-
-		std::string name;
-		std::vector<const Stop*> stops;
-
-		bool operator<(const Bus& other) const {
-			return name < other.name;
-		}
-	};
-
-	struct BusComparator
-	{
-		bool operator()(const Bus* lhs, const Bus* rhs) const
-		{
-			return *lhs < *rhs;
-		}
-	};
-
-	using BusSet = std::set<const Bus*, BusComparator>;
-	
-	struct Stop {
-		std::string name;
-		distance::Coordinates coords;
-	};
 
 	struct RouteInfo {
 		std::string_view name;
@@ -57,8 +32,8 @@ namespace transport {
 	class TransportCatalogue {
 	public:
 		void AddRoute(std::string name, const std::vector<std::string>& stopnames, bool isRing);
-		void AddStop(std::string name, distance::Coordinates coords);
-		
+		void AddStop(std::string name, ::geo::Coordinates coords);
+
 		const Bus* GetRoute(std::string_view busname) const;
 		const Stop* GetStop(std::string_view stopname) const;
 
@@ -71,13 +46,16 @@ namespace transport {
 		void SetDistance(std::string_view stopname1, std::string_view stopname2, unsigned int distance);
 		unsigned int GetDistance(std::string_view stopname1, std::string_view stopname2) const;
 
+		std::set<std::string> GetStopNames() const;
+		std::set<std::string> GetRouteNames() const;
+
 	private:
 		struct PtrPairHasher {
 			size_t operator()(std::pair<const Stop*, const Stop*> pair_) const noexcept {
 				return std::hash<const void*>{}(pair_.first) + 3 * std::hash<const void*>{}(pair_.second);
 			}
 		};
-	
+
 	private:
 		std::unordered_map<std::string_view, Stop*> stopname_to_stop_;
 		std::unordered_map<std::string_view, const Bus*> busname_to_bus_;

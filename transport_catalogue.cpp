@@ -5,6 +5,7 @@
 
 #include <cassert>
 #include <limits>
+#include <stdexcept>
 
 namespace transport {
 
@@ -12,22 +13,30 @@ namespace transport {
 
 	void TransportCatalogue::AddRoute(std::string name, const std::vector<std::string>& stopnames, bool isRing)
 	{
-		size_t stop_amount = stopnames.size() * (isRing ? 1 : 2) - (isRing ? 0 : 1);
+		size_t stop_amount = 0;
+		if (stopnames.size()) {
+			stop_amount = stopnames.size() * (isRing ? 1 : 2) - (isRing ? 0 : 1);
+		}
+		
 		vector<const Stop*> stop_ptrs(stop_amount);
 
-		transform(stopnames.cbegin(), stopnames.cend(), stop_ptrs.begin(), [this](const auto& stopname) {
-			return GetStop(stopname);
-			});
+		if (stopnames.size()) {
 
-		if (!isRing) {
-			auto it = stop_ptrs.begin();
-			advance(it, stopnames.size());
-			transform(++stopnames.crbegin(), stopnames.crend(), it, [this](const auto& stopname) {
+			transform(stopnames.cbegin(), stopnames.cend(), stop_ptrs.begin(), [this](const auto& stopname) {
 				return GetStop(stopname);
 				});
+
+			if (!isRing) {
+				auto it = stop_ptrs.begin();
+				advance(it, stopnames.size());
+				transform(++stopnames.crbegin(), stopnames.crend(), it, [this](const auto& stopname) {
+					return GetStop(stopname);
+					});
+			}
+
 		}
 
-		routes_.push_front({ name, std::move(stop_ptrs) });
+		routes_.push_front({ name, std::move(stop_ptrs), isRing });
 		busname_to_bus_[routes_.front().name] = &routes_.front();
 
 		for (auto stop_ptr : routes_.front().stops) {
@@ -35,7 +44,7 @@ namespace transport {
 		}
 	}
 
-	void TransportCatalogue::AddStop(std::string name, distance::Coordinates coords)
+	void TransportCatalogue::AddStop(std::string name, ::geo::Coordinates coords)
 	{
 		stops_.push_front({ name, coords });
 		stopname_to_stop_[stops_.front().name] = &stops_.front();
@@ -67,7 +76,7 @@ namespace transport {
 	{
 		return GetRouteInfo(*GetRoute(routename));
 	}
-	
+
 	RouteInfo TransportCatalogue::GetRouteInfo(const Bus& route) const
 	{
 		unordered_set<string_view> unique_stops;
@@ -76,9 +85,9 @@ namespace transport {
 
 		if (route.stops.size()) {
 
-			for (int i = 1; i < route.stops.size(); ++i) {
+			for (unsigned int i = 1; i < route.stops.size(); ++i) {
 				unique_stops.insert(route.stops[i]->name);
-				geo_route_length += distance::ComputeDistance(route.stops[i - 1]->coords, route.stops[i]->coords);
+				geo_route_length += ::geo::ComputeDistance(route.stops[i - 1]->coords, route.stops[i]->coords);
 				route_length += GetDistance(route.stops[i - 1]->name, route.stops[i]->name);
 			}
 
@@ -96,8 +105,8 @@ namespace transport {
 
 	StopInfo TransportCatalogue::GetStopInfo(const Stop& stop) const
 	{
-		return { stop.name, 
-			stopname_to_buses_.count(stop.name) ? 
+		return { stop.name,
+			stopname_to_buses_.count(stop.name) ?
 			std::optional<std::reference_wrapper<const BusSet>>{ stopname_to_buses_.at(stop.name) } : std::nullopt };
 	}
 
@@ -118,6 +127,30 @@ namespace transport {
 		return stops_distance_.at(key);
 	}
 
+	std::set<std::string> TransportCatalogue::GetStopNames() const {
+
+		std::set<std::string> result;
+
+		for (const auto& stop : stops_) {
+			result.insert(stop.name);
+		}
+
+		return result;
+
+	}
+
+	std::set<std::string> TransportCatalogue::GetRouteNames() const {
+		
+		std::set<std::string> result;
+
+		for (const auto& bus : routes_) {
+			result.insert(bus.name);
+		}
+
+		return result;
+
+	}
+
 	namespace tests {
 		void TestCommonCases()
 		{
@@ -125,10 +158,10 @@ namespace transport {
 
 			auto stop = catalogue.GetStop("unknown");
 			assert(!stop);
-			
+
 			auto route = catalogue.GetRoute("unknown");
 			assert(!route);
-			
+
 			catalogue.AddStop("stop A", { 53.199489, -105.759253 });
 			catalogue.AddStop("stop B", { 54.840504, 46.591607 });
 			catalogue.AddStop("stop C", { -23.354995, 119.732057 });
@@ -136,11 +169,11 @@ namespace transport {
 			catalogue.AddStop("stop E", { 64.136986, -21.872559 });
 			catalogue.AddStop("stop F", { -36.851350, 174.762452 });
 
-			catalogue.AddRoute("bus 001", { "stop C", "stop A", "stop A", "stop F", "stop D", "stop C"}, true);
+			catalogue.AddRoute("bus 001", { "stop C", "stop A", "stop A", "stop F", "stop D", "stop C" }, true);
 			auto route001 = catalogue.GetRouteInfo("bus 001");
 			assert(route001.stops_amount == 6);
 			assert(route001.unique_stops_amount == 4);
-			
+
 			catalogue.SetDistance("stop A", "stop B", 100);
 			catalogue.AddRoute("bus 999", { "stop A", "stop B", "stop E" }, false);
 			auto route999 = catalogue.GetRouteInfo("bus 999");
@@ -163,7 +196,7 @@ namespace transport {
 			assert(catalogue.GetDistance("A", "  ") == 1000);
 
 			catalogue.SetDistance("A", "A", 300);
-			catalogue.AddRoute("cyclic", {"A", "A", "A"}, false);
+			catalogue.AddRoute("cyclic", { "A", "A", "A" }, false);
 			auto cyclic_info = catalogue.GetRouteInfo("cyclic");
 			assert(cyclic_info.length == 1200);
 			assert(cyclic_info.unique_stops_amount == 1);
@@ -177,11 +210,11 @@ namespace transport {
 
 			// overflow check
 			unsigned int max_value = std::numeric_limits<unsigned int>::max();
-			catalogue.SetDistance("B", "C", max_value);			
+			catalogue.SetDistance("B", "C", max_value);
 			catalogue.AddRoute("B2C_and_back", { "B", "C" }, false);
 			auto overflow_info = catalogue.GetRouteInfo("B2C_and_back");
-			assert(overflow_info.length == max_value*2.0);
-			
+			assert(overflow_info.length == max_value * 2.0);
+
 		}
 	}
 
