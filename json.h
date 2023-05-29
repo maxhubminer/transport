@@ -21,20 +21,14 @@ namespace json {
 
     using Number = std::variant<int, double>;
 
-    class Node {
+    using Value = std::variant<std::nullptr_t, int, double, std::string, bool, Array, Dict>;
+    class Node final : private Value {
     public:
-        using Value = std::variant<std::nullptr_t, int, double, std::string, bool, Array, Dict>;
 
-        const Value& GetValue() const { return value_; }
+        // Делаем доступными все конструкторы родительского класса variant
+        using variant::variant;
 
-        Node() {}
-        Node(int value);
-        Node(bool value);
-        Node(double value);
-        Node(std::string value);
-        Node(Array array);
-        Node(Dict map);
-        Node(std::nullptr_t none);
+        const Value& GetValue() const { return *this; }
 
         bool IsInt() const;
         bool IsDouble() const; // Возвращает true, если в Node хранится int либо double.
@@ -53,7 +47,7 @@ namespace json {
         const Dict& AsMap() const;
 
         bool operator==(const Node& other) const {
-            return value_ == other.value_;
+            return *this == other;
         }
 
         bool operator!=(const Node& other) const {
@@ -62,7 +56,6 @@ namespace json {
 
 
     private:
-        Value value_;
     };
 
     class Document {

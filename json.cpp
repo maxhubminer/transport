@@ -276,39 +276,12 @@ namespace json {
 
     // ---Constructs:
 
-    Node::Node(int value)
-        : value_(value) {
-    }
-
-    Node::Node(bool value)
-        : value_(value) {
-    }
-
-    Node::Node(double value)
-        : value_(value) {
-    }
-
-    Node::Node(Array array)
-        : value_(move(array)) {
-    }
-
-    Node::Node(Dict map)
-        : value_(move(map)) {
-    }
-
-    Node::Node(std::string value)
-        : value_(move(value)) {
-    }
-
-    Node::Node(std::nullptr_t none)
-        : value_(none) {
-
-    }
+    
 
     // ---Get-functions:
     int Node::AsInt() const {
         try {
-            return get<int>(value_);
+            return get<int>(*this);
         }
         catch (const bad_variant_access&) {
             throw std::logic_error("wrong type");
@@ -317,7 +290,7 @@ namespace json {
 
     bool Node::AsBool() const {
         try {
-            return get<bool>(value_);
+            return get<bool>(*this);
         }
         catch (const bad_variant_access&) {
             throw std::logic_error("wrong type");
@@ -328,9 +301,9 @@ namespace json {
     // В последнем случае возвращается приведённое в double значение.
     double Node::AsDouble() const {
         try {
-            const auto* double_val = std::get_if<double>(&value_);
+            const auto* double_val = std::get_if<double>(&*this);
             if (double_val) return *double_val;
-            return get<int>(value_);
+            return get<int>(*this);
         }
         catch (const bad_variant_access&) {
             throw std::logic_error("wrong type");
@@ -339,7 +312,7 @@ namespace json {
 
     const std::string& Node::AsString() const {
         try {
-            return get<std::string>(value_);
+            return get<std::string>(*this);
         }
         catch (const bad_variant_access&) {
             throw std::logic_error("wrong type");
@@ -348,7 +321,7 @@ namespace json {
 
     const Array& Node::AsArray() const {
         try {
-            return get<Array>(value_);
+            return get<Array>(*this);
         }
         catch (const bad_variant_access&) {
             throw std::logic_error("wrong type");
@@ -357,7 +330,7 @@ namespace json {
 
     const Dict& Node::AsMap() const {
         try {
-            return get<Dict>(value_);
+            return get<Dict>(*this);
         }
         catch (const bad_variant_access&) {
             throw std::logic_error("wrong type");
@@ -530,28 +503,28 @@ namespace json {
     // ---Checker functions:
 
     bool Node::IsInt() const {
-        return holds_alternative<int>(value_);
+        return holds_alternative<int>(*this);
     }
     bool Node::IsDouble() const { // Возвращает true, если в Node хранится int либо double.
-        return holds_alternative<int>(value_) || holds_alternative<double>(value_);
+        return holds_alternative<int>(*this) || holds_alternative<double>(*this);
     }
     bool Node::IsPureDouble() const { // Возвращает true, если в Node хранится double.
-        return holds_alternative<double>(value_);
+        return holds_alternative<double>(*this);
     }
     bool Node::IsBool() const {
-        return holds_alternative<bool>(value_);
+        return holds_alternative<bool>(*this);
     }
     bool Node::IsString() const {
-        return holds_alternative<std::string>(value_);
+        return holds_alternative<std::string>(*this);
     }
     bool Node::IsNull() const {
-        return holds_alternative<std::nullptr_t>(value_);
+        return holds_alternative<std::nullptr_t>(*this);
     }
     bool Node::IsArray() const {
-        return holds_alternative<Array>(value_);
+        return holds_alternative<Array>(*this);
     }
     bool Node::IsMap() const {
-        return holds_alternative<Dict>(value_);
+        return holds_alternative<Dict>(*this);
     }
 
 
